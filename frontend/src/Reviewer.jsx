@@ -10,6 +10,8 @@ function Reviewer() {
   const [isLoading, setIsLoading] = useState(true);
   const [allDone, setAllDone] = useState(false);
   const [stats, setStats] = useState(null);
+  const [lastSubmission, setLastSubmission] = useState(null);
+  const [undoTimer, setUndoTimer] = useState(null);
 
   const fetchStats = async () => {
     try {
@@ -38,23 +40,81 @@ function Reviewer() {
     }
   };
 
+  const commitSubmission = () => {
+    setLastSubmission(null);
+    setUndoTimer(null);
+    fetchNextImage();
+  };
+
+  const handleUndo = async () => {
+    if (!lastSubmission) return;
+
+    clearTimeout(undoTimer);
+    setUndoTimer(null);
+
+    const submissionToUndo = { ...lastSubmission };
+    setLastSubmission(null);
+    setIsLoading(true);
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/labels/${submissionToUndo.id}`);
+      
+      fetchStats();
+      setCurrentImage(submissionToUndo.image);
+      setCorrectedLabel(
+        submissionToUndo.label === submissionToUndo.image.suggested_label ? '' : submissionToUndo.label
+      );
+    } catch (error) {
+      console.error("Error undoing label:", error);
+      fetchNextImage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchNextImage();
     fetchStats();
+    
+
+    return () => {
+      if (undoTimer) clearTimeout(undoTimer);
+    };
   }, []);
 
   const submitReview = async (label) => {
     if (!currentImage) return;
 
+    if (undoTimer) clearTimeout(undoTimer);
+
+    const imageBeingReviewed = currentImage;
+    setCurrentImage(null);
+    setIsLoading(true);
+
     try {
-      await axios.post(`${API_BASE_URL}/api/labels`, {
-        image_id: currentImage.id,
+      const response = await axios.post(`${API_BASE_URL}/api/labels`, {
+        image_id: imageBeingReviewed.id,
         label: label,
       });
-      fetchNextImage();
+
+      const newLabel = response.data; 
+
+      setIsLoading(false);
       fetchStats();
+
+      setLastSubmission({
+        id: newLabel.id,
+        label: newLabel.label,
+        image: imageBeingReviewed,
+      });
+
+      const timerId = setTimeout(commitSubmission, 3000);
+      setUndoTimer(timerId);
+
     } catch (error) {
       console.error("Error submitting label:", error);
+      setCurrentImage(imageBeingReviewed);
+      setIsLoading(false);
     }
   };
 
@@ -80,6 +140,7 @@ function Reviewer() {
         <ul>
           <li>If the suggestion is correct, click <strong>"Confirm"</strong>.</li>
           <li>If the suggestion is wrong, type the correct label and click <strong>"Correct"</strong>.</li>
+          <li>To undo your last submission, click <strong>"Undo"</strong>, <strong>You have 3 seconds!</strong></li>
         </ul>
         <p>Your feedback will be used to retrain the model. Thank you!</p>
 
@@ -102,11 +163,20 @@ function Reviewer() {
       </aside>
 
       <main className="reviewer-container">
-        {isLoading && <div className="loading-message">Loading next image...</div>}
+        {lastSubmission && (
+          <div className="undo-toast">
+            <p>Label '<strong>{lastSubmission.label}</strong>' saved.</p>
+            <button onClick={handleUndo} className="btn btn-undo">
+              Undo
+            </button>
+          </div>
+        )}
+
+        {isLoading && !lastSubmission && <div className="loading-message">Loading...</div>}
 
         {allDone && <div className="all-done-message">All images reviewed! Thank you!</div>}
 
-        {!isLoading && !allDone && currentImage && (
+        {!isLoading && !allDone && currentImage && !lastSubmission && (
           <>
             <h2>Image Review</h2>
             <div className="image-container">

@@ -23,7 +23,6 @@ def create_verified_label(db: Session, image_id: str, label: str):
         label=label,
         was_correct=is_correct
     )
-
     db.add(db_label)
     db.commit()
     db.refresh(db_label)
@@ -46,3 +45,13 @@ def get_review_stats(db: Session):
         "correct_predictions": total_correct,
         "accuracy": accuracy
     }
+
+
+def delete_label_by_id(db: Session, label_id: int):
+    db_label = db.query(models.VerifiedLabel).filter(models.VerifiedLabel.id == label_id).first()
+    
+    if not db_label:
+        return False
+    db.delete(db_label)
+    db.commit()    
+    return True

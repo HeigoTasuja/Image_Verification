@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Depends, Response
-from fastapi.middleware.cors import CORSMiddleware # For local dev
+from fastapi import FastAPI, Depends, Response, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 
@@ -22,7 +22,6 @@ MOCK_IMAGES_DATA = [
 
 
 def populate_db_on_startup():
-    print("Starting up... populating database if needed.")
     db = database.SessionLocal()
     try:
         if db.query(models.Image).count() == 0:
@@ -30,9 +29,6 @@ def populate_db_on_startup():
                 db_image = models.Image(**img_data)
                 db.add(db_image)
             db.commit()
-            print("Database populated with mock data.")
-        else:
-            print("Database already contains data.")
     finally:
         db.close()
 
@@ -41,9 +37,8 @@ async def lifespan(app: FastAPI):
     populate_db_on_startup() 
     yield
 
-
+# :ToDo Remove when FE also done
 app = FastAPI(lifespan=lifespan)
-# ToDo Remove when FE also done
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -57,7 +52,7 @@ def get_next_image_to_review(db: Session = Depends(database.get_db)):
     image = crud.get_next_image(db)
     
     if not image:
-        return Response(status_code=204)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
         
     return image
 
@@ -66,11 +61,25 @@ def get_stats(db: Session = Depends(database.get_db)):
     stats = crud.get_review_stats(db)
     return stats
 
-@app.post("/api/labels", status_code=201)
-def submit_label(label_request: models.LabelRequest, db: Session = Depends(database.get_db)):
-    crud.create_verified_label(
+@app.post(
+    "/api/labels", 
+    response_model=models.LabelResponse, 
+    status_code=status.HTTP_201_CREATED
+)
+def submit_label(label_in: models.LabelRequest, db: Session = Depends(database.get_db)):
+    db_label = crud.create_verified_label(
         db=db, 
-        image_id=label_request.image_id, 
-        label=label_request.label
+        image_id=label_in.image_id, 
+        label=label_in.label
     )
-    return {"status": "success", "image_id": label_request.image_id, "label": label_request.label}
+    return db_label
+
+@app.delete("/api/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_label(label_id: int, db: Session = Depends(database.get_db)):
+    success = crud.delete_label_by_id(db=db, label_id=label_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Label not found"
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

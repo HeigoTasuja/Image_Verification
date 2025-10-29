@@ -35,3 +35,11 @@ class StatsResponse(BaseModel):
     total_processed: int
     correct_predictions: int
     accuracy: float
+
+class LabelResponse(BaseModel):
+    id: int
+    image_id: str
+    label: str
+
+    class Config:
+        from_attributes = True

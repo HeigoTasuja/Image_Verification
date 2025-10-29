@@ -7,8 +7,6 @@ from . import crud, models, database
 
 
 models.Base.metadata.create_all(bind=database.engine)
-
-
 MOCK_IMAGES_DATA = [
     {"id": "img_001", "url": "https://picsum.photos/id/1/400/300", "suggested_label": "workstation", "confidence": 0.95},
     {"id": "img_002", "url": "https://picsum.photos/id/20/400/300", "suggested_label": "desk", "confidence": 0.82},
@@ -24,10 +22,6 @@ MOCK_IMAGES_DATA = [
 
 
 def populate_db_on_startup():
-    """
-    Populates the 'images' table with mock data if it's empty.
-    This is a synchronous function.
-    """
     print("Starting up... populating database if needed.")
     db = database.SessionLocal()
     try:
@@ -42,7 +36,6 @@ def populate_db_on_startup():
     finally:
         db.close()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     populate_db_on_startup() 
@@ -50,7 +43,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
 # ToDo Remove when FE also done
 app.add_middleware(
     CORSMiddleware,
@@ -60,12 +52,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/api/images/next", response_model=models.ImageResponse)
 def get_next_image_to_review(db: Session = Depends(database.get_db)):
-    """
-    Fetch an image that has not yet been reviewed.
-    """
     image = crud.get_next_image(db)
     
     if not image:
@@ -73,11 +61,13 @@ def get_next_image_to_review(db: Session = Depends(database.get_db)):
         
     return image
 
+@app.get("/api/stats", response_model=models.StatsResponse)
+def get_stats(db: Session = Depends(database.get_db)):
+    stats = crud.get_review_stats(db)
+    return stats
+
 @app.post("/api/labels", status_code=201)
 def submit_label(label_request: models.LabelRequest, db: Session = Depends(database.get_db)):
-    """
-    Submit a human-verified label for an image.
-    """
     crud.create_verified_label(
         db=db, 
         image_id=label_request.image_id, 

@@ -29,7 +29,9 @@ cd [<PATH_TO_FOLDER_WHERE_CLONED/Image_Verification>]
 
 2. Build and Run with Docker Compose
 From the root of the project (where the docker-compose.yml file is located), run the following command:
-# Use --build the first time or when you change code
+
+docker-compose up -d
+or
 docker-compose up -d --build
 
 This will:

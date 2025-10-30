@@ -1,0 +1,17 @@
+# Node.js dependencies
+node_modules
+
+# Build output
+dist
+
+# Local environment files
+.env
+.env.*
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+# Git files
+.git
+.gitignore

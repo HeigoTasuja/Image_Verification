@@ -1,0 +1,18 @@
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Local environment
+.env
+venv/
+env/
+
+# Local database
+data/
+*.db
+
+# Git files
+.git
+.gitignore

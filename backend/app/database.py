@@ -17,6 +17,12 @@ Base = declarative_base()
 
 
 def get_db():
+    """Yield a SQLAlchemy Session for use in request handlers.
+
+    Yields:
+        A SQLAlchemy Session instance which will be closed when the request
+        finishes.
+    """
     db = SessionLocal()
     try:
         yield db

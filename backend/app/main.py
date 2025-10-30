@@ -1,12 +1,13 @@
 from fastapi import FastAPI, Depends, Response, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
+import os
 
 from . import crud, models, database
 
 
 models.Base.metadata.create_all(bind=database.engine)
+
 MOCK_IMAGES_DATA = [
     {"id": "img_001", "url": "https://picsum.photos/id/1/400/300", "suggested_label": "workstation", "confidence": 0.95},
     {"id": "img_002", "url": "https://picsum.photos/id/20/400/300", "suggested_label": "desk", "confidence": 0.82},
@@ -22,6 +23,11 @@ MOCK_IMAGES_DATA = [
 
 
 def populate_db_on_startup():
+    """Seed the database with sample images.
+
+    This helper is intended for local development. It will add a small set of
+    example images when the database is empty.
+    """
     db = database.SessionLocal()
     try:
         if db.query(models.Image).count() == 0:
@@ -34,18 +40,19 @@ def populate_db_on_startup():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    populate_db_on_startup() 
+    """FastAPI lifespan handler.
+
+    Populates the DB only when the environment variable ``POPULATE_MOCK_DATA``
+    is set to a truthy value (``1``, ``true``, ``yes``). This prevents
+    accidental seeding in non-development environments.
+    """
+    populate = os.getenv("POPULATE_MOCK_DATA", "false").lower() in ("1", "true", "yes")
+    if populate:
+        populate_db_on_startup()
     yield
 
-# :ToDo Remove when FE also done
+
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/api/images/next", response_model=models.ImageResponse)
 def get_next_image_to_review(db: Session = Depends(database.get_db)):

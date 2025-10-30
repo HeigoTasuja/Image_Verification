@@ -6,6 +6,8 @@ services:
     volumes:
       - sqlite_data:/app/data
     restart: unless-stopped
+    environment:
+      - POPULATE_MOCK_DATA=true
   frontend:
     build: ./frontend
     ports:

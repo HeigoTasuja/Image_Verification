@@ -41,7 +41,7 @@ Create a persistent Docker volume (sqlite_data) to store the SQLite database.
 
 3. Access the Application
 Once the containers are running, open your web browser and navigate to:
-http://localhost
+http://localhost:8080
 
 
 Technical Choices & Assumptions

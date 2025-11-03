@@ -28,11 +28,18 @@ git clone [[https://github.com/HeigoTasuja/Image_Verification](https://github.co
 cd [<PATH_TO_FOLDER_WHERE_CLONED/Image_Verification>]
 
 2. Build and Run with Docker Compose
+
+NB! Make sure you don't have nginx running locally first!
+
+'sudo lsof -i :8080' (to check if anything is running on 8080)
+if it is then:
+'sudo nginx -s stop' or if managed by brew: 'brew services stop nginx'
+
 From the root of the project (where the docker-compose.yml file is located), run the following command:
 
-docker-compose up -d
+'docker-compose up -d'
 or
-docker-compose up -d --build
+'docker-compose up -d --build'
 
 This will:
 Build the Docker images for the backend and frontend.
